@@ -1,0 +1,17 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.usb.usblibrary" >
+    <application>
+        <receiver
+        android:name=".CyUsbReceiver"
+        android:enabled="true"
+        android:exported="true">
+        <intent-filter>
+            <action android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED" />
+            <action android:name="android.hardware.usb.action.USB_DEVICE_DETACHED" />
+            <action android:name="android.usb.action.USB_PERMISSION" />
+        </intent-filter>
+    </receiver>
+    </application>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"></uses-permission>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"></uses-permission>
+</manifest>
