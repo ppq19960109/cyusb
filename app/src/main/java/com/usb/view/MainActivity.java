@@ -33,8 +33,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent("android.intent.usb.image");
-//                Intent intent = new Intent();
-//                intent.setClass(MainActivity.this, ImageActivity.class);
                 startActivity(intent);
             }
         });
@@ -48,11 +46,14 @@ public class MainActivity extends AppCompatActivity {
 
                         break;
                     case R.id.rb_image:
-
+                        Intent intent = new Intent("android.intent.usb.image");
+                        startActivity(intent);
                         break;
                 }
 
             }
         });
     }
+
+
 }
