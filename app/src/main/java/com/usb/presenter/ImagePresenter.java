@@ -286,7 +286,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
             onViewResult("ImagePresenter", "读取校正数据失败");
         }
 
-//        ImageProUtils.getImageArray(pixelGain, secondFrameBuf);
+        ImageProUtils.getImageArray(pixelGain, secondFrameBuf);
         if (!imageModel.readConfig(cySysConfig)) {
             onViewResult("ImagePresenter", "读取配置数据失败");
         }

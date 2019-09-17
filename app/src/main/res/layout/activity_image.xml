@@ -1,23 +1,49 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#eeeeee"
     android:orientation="vertical">
     <RadioGroup
+        android:id="@+id/rg_tag"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:orientation="horizontal">
-    <RadioButton
-        android:id="@+id/rb_nearl"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-
-        android:button="@null"
-        android:text="粗调"
-        />
+        android:orientation="horizontal"
+        android:gravity="center"
+        >
+        <RadioButton
+            android:id="@+id/rb_nearl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:button="@null"
+            android:layout_weight="1"
+            />
+        <RadioButton
+            android:id="@+id/rb_nears"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:button="@null"
+            android:layout_weight="1"
+            />
+        <RadioButton
+            android:id="@+id/rb_fars"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:button="@null"
+            android:layout_weight="1"
+            />
+        <RadioButton
+            android:id="@+id/rb_farl"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:button="@null"
+            android:layout_weight="1"
+            />
     </RadioGroup>
 
     <LinearLayout
@@ -67,13 +93,6 @@
                 android:text="播放图像" />
 
             <Button
-                android:id="@+id/focusNear"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="调焦近" />
-
-            <Button
                 android:id="@+id/imagecorrect"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -92,13 +111,6 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:text="停止图像" />
-
-            <Button
-                android:id="@+id/focusFar"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:text="调焦远" />
 
             <Button
                 android:id="@+id/imageClear"

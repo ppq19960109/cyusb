@@ -1,6 +1,5 @@
 package com.usb.view;
 
-import android.app.Activity;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
@@ -12,20 +11,22 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
+import android.widget.RadioGroup;
 import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 import com.usb.common.CommonUtils;
 import com.usb.common.ImageProUtils;
 import com.usb.model.R;
 import com.usb.presenter.TE_A;
 
+import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
 
-public class ImageActivity extends Activity {
+public class ImageActivity extends AppCompatActivity {
 
-    private Button focusNear;
-    private Button focusFar;
     private Button imageClear;
     private Button imageplay;
     private Button imagestop;
@@ -38,13 +39,14 @@ public class ImageActivity extends Activity {
 
     private TE_A cyImage;
 
-    private BitmapPlayThread BmpPlayThread;
+    private RadioGroup rgFcous;
 
+    private BitmapPlayThread BmpPlayThread;
     private Timer timerThread;
     private TimerTask timerTask;
-
     private Handler handlerPost = new Handler();
     private short[] imagebuf = new short[288 * 384];
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,10 +57,9 @@ public class ImageActivity extends Activity {
         cyImage = new TE_A();
         cyImage.initialize(this);
         cyImage.openTE_A(this, 0);
-        int ret=cyImage.cameraPower(true);
-        if(ret!=0)
-        {
-            CommonUtils.showToastMsg(ImageActivity.this,"cameraPower"+ret);
+        int ret = cyImage.cameraPower(true);
+        if (ret != 0) {
+            CommonUtils.showToastMsg(ImageActivity.this, "cameraPower失败");
         }
 
     }
@@ -71,8 +72,6 @@ public class ImageActivity extends Activity {
     }
 
     private void initView() {
-        focusNear = (Button) findViewById(R.id.focusNear);
-        focusFar = (Button) findViewById(R.id.focusFar);
         imageClear = (Button) findViewById(R.id.imageClear);
         imageplay = (Button) findViewById(R.id.imageplay);
         imagestop = (Button) findViewById(R.id.imagestop);
@@ -96,24 +95,8 @@ public class ImageActivity extends Activity {
                 cyImage.cameraPower(isChecked);
             }
         });
-        focusNear.setOnTouchListener((v, event) -> {
-                    if (event.getAction() == MotionEvent.ACTION_UP) {
-                        cyImage.setFocusing(true, true);
-                        return true;
-                    }
-                    return false;
-                }
-        );
-        focusFar.setOnTouchListener((v, event) -> {
-                    if (event.getAction() == MotionEvent.ACTION_UP) {
-                        cyImage.setFocusing(true, false);
-                        return true;
-                    }
-                    return false;
-                }
-        );
 
-        imageView.setOnTouchListener(new View.OnTouchListener() {
+        imageView.setOnTouchListener(new View.OnTouchListener(){
             @Override
             public boolean onTouch(View v, MotionEvent e) {
                 if (e.getAction() == MotionEvent.ACTION_DOWN) {
@@ -127,16 +110,54 @@ public class ImageActivity extends Activity {
                     float temp = cyImage.calcTemp((short) x, (short) y);
                     tvtext.setText("X:" + x + "Y:" + y + "温度:" + temp);
                     return true;
-                } else {
-                    return false;
                 }
+                return false;
             }
         });
 
-        Button mNextButton=(Button)findViewById(R.id.rb_nearl);
-        Drawable drawable=getResources().getDrawable(R.drawable.scan_nearl);
-        drawable.setBounds(0,0,200,100);
-        mNextButton.setCompoundDrawables(null,drawable,null,null);
+        ArrayList<Button> rbList = new ArrayList<>();
+        rbList.add(findViewById(R.id.rb_nearl));
+        rbList.add(findViewById(R.id.rb_nears));
+        rbList.add(findViewById(R.id.rb_fars));
+        rbList.add(findViewById(R.id.rb_farl));
+
+        ArrayList<Drawable> rbDraw = new ArrayList<>();
+        rbDraw.add(getResources().getDrawable(R.drawable.scan_nearl));
+        rbDraw.add(getResources().getDrawable(R.drawable.scan_nears));
+        rbDraw.add(getResources().getDrawable(R.drawable.scan_fars));
+        rbDraw.add(getResources().getDrawable(R.drawable.scan_farl));
+
+        for (int i=0;i<4;++i) {
+            Drawable drawable=rbDraw.get(i);
+            drawable.setBounds(0, 0, 100, 100);
+            rbList.get(i).setCompoundDrawables(null, drawable, null, null);
+        }
+
+        rgFcous=(RadioGroup) findViewById(R.id.rg_tag);
+        rgFcous.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                switch (checkedId){
+                    case R.id.rb_nearl:
+                        cyImage.setFocusing(true, true);
+                        CommonUtils.showToastMsg(ImageActivity.this, "rb_nearl");
+                        break;
+                    case R.id.rb_nears:
+                        cyImage.setFocusing(false, true);
+                        CommonUtils.showToastMsg(ImageActivity.this, "rb_nears");
+                        break;
+                    case R.id.rb_fars:
+                        cyImage.setFocusing(false, false);
+                        CommonUtils.showToastMsg(ImageActivity.this, "rb_fars");
+                        break;
+                    case R.id.rb_farl:
+                        cyImage.setFocusing(true, false);
+                        CommonUtils.showToastMsg(ImageActivity.this, "rb_farl");
+                        break;
+                }
+
+            }
+        });
 
     }
 
@@ -179,14 +200,6 @@ public class ImageActivity extends Activity {
                 break;
                 case R.id.imageClear: {
                     cyImage.removeImageCorrect();
-                }
-                break;
-                case R.id.focusNear: {
-
-                }
-                break;
-                case R.id.focusFar: {
-
                 }
                 break;
             }

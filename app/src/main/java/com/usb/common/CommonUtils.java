@@ -1,12 +1,13 @@
 package com.usb.common;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Looper;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class CommonUtils {
     /**
@@ -61,7 +62,7 @@ public class CommonUtils {
      * @param requestCode
      * @return
      */
-    public static boolean isGrantExternalRW(Activity activity, int requestCode) {
+    public static boolean isGrantExternalRW(AppCompatActivity activity, int requestCode) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M &&
                 (activity.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                         != PackageManager.PERMISSION_GRANTED ||

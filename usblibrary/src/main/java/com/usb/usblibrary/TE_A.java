@@ -1,8 +1,9 @@
 package com.usb.usblibrary;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class TE_A implements ImageContract.ITE_A {
 
@@ -18,8 +19,8 @@ public class TE_A implements ImageContract.ITE_A {
         if (context == null) {
             return;
         }
-        if (context instanceof Activity) {
-            CommonUtils.isGrantExternalRW((Activity) context, 0);
+        if (context instanceof AppCompatActivity) {
+            CommonUtils.isGrantExternalRW((AppCompatActivity) context, 0);
         }
         CommonUtils.debugContext = context;
 

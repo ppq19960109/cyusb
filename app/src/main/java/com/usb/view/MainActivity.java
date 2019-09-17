@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Button;
+import android.widget.RadioGroup;
 
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -12,6 +13,7 @@ import com.usb.model.R;
 public class MainActivity extends AppCompatActivity {
 
     private Button image;
+    private RadioGroup rgToolbar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -23,6 +25,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void initView() {
         image = (Button) findViewById(R.id.bt_image);
+        rgToolbar=(RadioGroup) findViewById(R.id.rg_toolbar);
     }
 
     private void initListener() {
@@ -33,6 +36,22 @@ public class MainActivity extends AppCompatActivity {
 //                Intent intent = new Intent();
 //                intent.setClass(MainActivity.this, ImageActivity.class);
                 startActivity(intent);
+            }
+        });
+
+
+        rgToolbar.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup group, int checkedId) {
+                switch (checkedId) {
+                    case R.id.rb_main:
+
+                        break;
+                    case R.id.rb_image:
+
+                        break;
+                }
+
             }
         });
     }
