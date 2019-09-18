@@ -33,7 +33,6 @@ public class ImageActivity extends AppCompatActivity {
     private Button imagecorrect;
     private CheckBox cameraPower;
 
-    private TextView tvtext;
     private TextView tvfrequency;
     private ImageView imageView;
 
@@ -108,7 +107,8 @@ public class ImageActivity extends AppCompatActivity {
                     int x = touchX * 384 / v.getWidth();
                     int y = touchY * 288 / v.getHeight();
                     float temp = cyImage.calcTemp((short) x, (short) y);
-                    tvtext.setText("X:" + x + "Y:" + y + "温度:" + temp);
+
+                    CommonUtils.showToastMsg(null,"X:" + x + "Y:" + y + "温度:" + temp);
                     return true;
                 }
                 return false;

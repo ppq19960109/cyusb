@@ -16,10 +16,8 @@ import android.hardware.usb.UsbManager;
 import java.util.HashMap;
 import java.util.Iterator;
 
-public class CyUsbDevice {
-    private static CyUsbDevice usbInstance = new CyUsbDevice();
-    public static final String ACTION_USB_PERMISSION = "android.usb.action.USB_PERMISSION";
-    private final String RECEIVER_CLS_NAME = CyUsbReceiver.class.getPackage().getName() + ".CyUsbReceiver";
+public class UsbDeviceUtils {
+    private static UsbDeviceUtils Instance = new UsbDeviceUtils();
 
     private boolean usbConnected;
     private PendingIntent mPermissionIntent;
@@ -31,12 +29,12 @@ public class CyUsbDevice {
     private UsbEndpoint[] usbEndpointIn = new UsbEndpoint[16];
     private UsbEndpoint[] usbEndpointOut = new UsbEndpoint[16];
 
-    private CyUsbDevice() {
+    private UsbDeviceUtils() {
 
     }
 
-    public static CyUsbDevice getInstance() {
-        return usbInstance;
+    public static UsbDeviceUtils getInstance() {
+        return Instance;
     }
 
     public boolean isUsbConnected() {
@@ -50,7 +48,7 @@ public class CyUsbDevice {
     /**
      * 关闭USB传输
      */
-    public void usbClose() {
+    public void close() {
         setUsbConnected(false);
         if (usbConnection != null) {
             usbConnection.releaseInterface(usbInterface);
@@ -93,9 +91,9 @@ public class CyUsbDevice {
         }
         if (!usbManager.hasPermission(usbDevice)) {
             if (mPermissionIntent == null) {
-                Intent intent = new Intent(ACTION_USB_PERMISSION);
+                Intent intent = new Intent(UsbReceiver.ACTION_USB_PERMISSION);
                 intent.setComponent(new ComponentName(context,
-                        RECEIVER_CLS_NAME));
+                        UsbReceiver.CLS_NAME));
                 mPermissionIntent = PendingIntent.getBroadcast(context, 0, intent, 0);
 
                 if (mPermissionIntent != null) {
@@ -178,7 +176,7 @@ public class CyUsbDevice {
      * @return
      */
     public int controlTransfer(int requestType, int request, int value,
-                                   int index, byte[] buffer, int length, int timeout) {
+                               int index, byte[] buffer, int length, int timeout) {
         if (!isUsbConnected()) {
             return 1;
         }
@@ -233,17 +231,17 @@ public class CyUsbDevice {
         usbManager = (UsbManager) context.getSystemService(Context.USB_SERVICE);
         HashMap<String, UsbDevice> deviceList = usbManager.getDeviceList();
         Iterator<UsbDevice> deviceIterator = deviceList.values().iterator();
-        StringBuffer strbuf = new StringBuffer();
+        StringBuffer strBuf = new StringBuffer();
         while (deviceIterator.hasNext()) {
             UsbDevice device = deviceIterator.next();
-            strbuf.append("vid:" + device.getVendorId() + " pid:" + device.getProductId());
+            strBuf.append("VID:" + device.getVendorId() + " PID:" + device.getProductId());
         }
-        return strbuf.toString();
+        return strBuf.toString();
     }
 
     public Intent registerReceiver(Context context, BroadcastReceiver receiver) {
         IntentFilter filter = new IntentFilter();
-        filter.addAction(ACTION_USB_PERMISSION);
+        filter.addAction(UsbReceiver.ACTION_USB_PERMISSION);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         return context.registerReceiver(receiver, filter);

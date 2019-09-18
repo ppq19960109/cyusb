@@ -72,7 +72,9 @@ public interface ImageContract {
         boolean connectToPC();
 
         Bitmap createBitmap(short[] buf);
+
         Bitmap createBitmap(int[] buf);
+
         void removeImageCorrect();
     }
 
@@ -92,6 +94,8 @@ public interface ImageContract {
         boolean restartDetector();
 
         boolean readConfig(CySystemConfig sysConfig);
+
+        float readZeroTemp();
 
         boolean readNonUniformCorrect(byte[] outData, int len);
 

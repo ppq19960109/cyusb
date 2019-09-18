@@ -136,6 +136,19 @@ public class ImageModel implements ImageContract.IImageModel {
 
         return sysConfig.byteToConfig(buf);
     }
+    @Override
+    public float readZeroTemp() {
+        int cmd, len = 4;
+        byte[] buf = new byte[4];
+        cmd = usbCmdToData(0x12, 0, 0);
+        if (!ControlTransfer(USBCONREAD, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, len, CONTROLTIMEOUT)) {
+            return 0;
+        }
+        int temp=(buf[0]&0xff)|((buf[1]&0xff)<<8)|((buf[2]&0xff)<<16)|((buf[3]&0xff)<<24);
+
+        float ftemp =(float)((temp&0xffff)*0.0625);
+        return ftemp;
+    }
 
     @Override
     public boolean readNonUniformCorrect(byte[] outData, int len) {

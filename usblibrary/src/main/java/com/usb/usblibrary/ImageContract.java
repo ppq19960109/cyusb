@@ -7,9 +7,11 @@ public interface ImageContract {
     interface CallBack {
         void onResult(String tag, String msg);
     }
+
     interface ITE_A {
-         void onResult(String tag, String msg);
-         boolean openTE_A(Context context, int hnd_dev);
+        void onResult(String tag, String msg);
+
+        boolean openTE_A(Context context, int hnd_dev);
 
         void closeTE();
 
@@ -39,13 +41,13 @@ public interface ImageContract {
     }
 
     interface IImagePresenter {
-        boolean openTE_A(Context context, int index) throws InterruptedException;
+        boolean openTE_A(Context context, int index);
 
         void closeTE();
 
         boolean isConnected();
 
-        int recvImage(short[] buf, boolean agc) throws InterruptedException;
+        int recvImage(short[] buf, boolean agc);
 
         int recvImage(int[] buf, boolean agc);
 
@@ -62,10 +64,15 @@ public interface ImageContract {
         int getID();
 
         boolean setFocusing(boolean size, boolean range);
+
         int cameraPower(boolean enable);
+
         boolean connectToPC();
-        Bitmap createImage(short[] buf);
-        int[]  getFrequency();
+
+        Bitmap createBitmap(short[] buf);
+
+        Bitmap createBitmap(int[] buf);
+
         void removeImageCorrect();
     }
 
@@ -85,6 +92,8 @@ public interface ImageContract {
         boolean restartDetector();
 
         boolean readConfig(CySystemConfig sysConfig);
+
+        float readZeroTemp();
 
         boolean readNonUniformCorrect(byte[] outData, int len);
 

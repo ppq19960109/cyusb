@@ -6,9 +6,9 @@ import android.graphics.Bitmap;
 import java.util.Arrays;
 
 public class ImagePresenter implements ImageContract.IImagePresenter {
-    private ImageContract.IImageModel imageModel= ImageModel.getInstance();;
-    private CySystemConfig cySysConfig= new CySystemConfig();
-    private ImageContract.ITE_A imageView;
+    private ImageContract.IImageModel imageModel = ImageModel.getInstance();
+    private CySystemConfig cySysConfig = new CySystemConfig();
+    private ImageContract.ITE_A mView;
 
     private final int imageWidth = 384; //图像宽度
     private final int imageHight = 288;  //图像高度
@@ -29,6 +29,9 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
     private short[] pixelOffset;
     private short[] pixelGain;
 
+    /**
+     * 图像均衡化参数
+     */
     private short[] nHist;
     private float[] pHist;
     private float[] cHist;
@@ -39,22 +42,18 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      */
     private volatile boolean correctionFlag;
 
-    private long preTimeMillis;
-    private int[] frequency=new int[2];
 
     private float[] tempCollect;  //温度集合
 
-    private ImageContract.CallBack callBack=new ImageContract.CallBack() {
+    private ImageContract.CallBack callBack = new ImageContract.CallBack() {
         @Override
         public void onResult(String tag, String msg) {
-            if(isViewAttach()){
-                getView().onResult(tag,msg);
-            }
+            onViewResult(tag, msg);
         }
     };
 
-    public ImagePresenter( ImageContract.ITE_A view) {
-        imageView=view;
+    public ImagePresenter(ImageContract.ITE_A view) {
+        mView = view;
 
         packBuf = new byte[packHead + packSize];
         firstFrameBuf = new byte[imageByteLen];
@@ -72,14 +71,24 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
         cHist = new float[256];
         PixelSum = new long[imageSize];
     }
+
     private boolean isViewAttach() {
-        return imageView!=null;
+        return mView != null;
     }
+
     private ImageContract.ITE_A getView() {
-        return imageView==null?null:imageView;
+        return mView == null ? null : mView;
     }
+
+    private void onViewResult(String tag, String msg) {
+        if (isViewAttach()) {
+            getView().onResult(tag, msg);
+        }
+    }
+
     /**
      * 获取图像高度
+     *
      * @return
      */
     @Override
@@ -89,6 +98,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
 
     /**
      * 获取图像宽度
+     *
      * @return
      */
     @Override
@@ -104,11 +114,11 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      * @throws InterruptedException
      */
     @Override
-    public boolean openTE_A(Context context, int index) throws InterruptedException {
+    public boolean openTE_A(Context context, int index) {
         if (context == null) {
             return false;
         }
-        if (imageModel.openUsbDevice(context, index,callBack)) {
+        if (imageModel.openUsbDevice(context, index, callBack)) {
             return imageZeroAdjust();
         }
         return false;
@@ -134,13 +144,13 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      * @throws InterruptedException
      */
     @Override
-    public int recvImage(short[] buf, boolean agc) throws InterruptedException {
+    public int recvImage(short[] buf, boolean agc) {
 
         if (!isConnected() || !getImageFrame(pixelSbuf, 0)) {
             return 4;
         }
-        grayToTemp(cySysConfig,pixelSbuf, true);
-        ImageProUtils.setImageOffset(pixelSbuf,  pixelGain, pixelOffset);
+        cySysConfig.grayToTemp(pixelSbuf, tempCollect,false);
+        ImageProUtils.setImageOffset(pixelSbuf, pixelGain, pixelOffset);
         ImageProUtils.MedianFlitering(pixelSbuf, buf, imageWidth, imageHight, 3);
 
         ImageProUtils.setRGBRange(buf, 2000, 20000);
@@ -213,16 +223,16 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
 
         Thread.sleep(steeringEngineDelay);
 
-            for (int i = 0; i < 4; ++i) {
-                getImageFrame(pixelBuf, 1);
+        for (int i = 0; i < 4; ++i) {
+            getImageFrame(pixelBuf, 1);
+        }
+        for (int i = 0; i < aveCount; ++i) {
+            getImageFrame(pixelBuf, 1);
+            for (int j = 0; j < PixelSum.length; ++j) {
+                PixelSum[j] += pixelBuf[j];
             }
-            for (int i = 0; i < aveCount; ++i) {
-                getImageFrame(pixelBuf, 1);
-                for (int j = 0; j < PixelSum.length; ++j) {
-                    PixelSum[j] += pixelBuf[j];
-                }
-            }
-            ImageProUtils.NonUniformCorrection(PixelSum, pixelGain, pixelOffset, aveCount);
+        }
+        cySysConfig.m_swZeroGray=ImageProUtils.NonUniformCorrection(PixelSum, pixelGain, pixelOffset, aveCount);
 
         Arrays.fill(PixelSum, 0);
         imageModel.steeringEngine(true);
@@ -264,34 +274,19 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      * @return
      * @throws InterruptedException
      */
-    public boolean imageZeroAdjust() throws InterruptedException {
+    public boolean imageZeroAdjust() {
         imageModel.restartDetector();
-        if ( !imageModel.readNonUniformCorrect(secondFrameBuf, imageByteLen)) {
-            CommonUtils.showToastMsg(null, "readNonUniformCorrect");
+        if (!imageModel.readNonUniformCorrect(secondFrameBuf, imageByteLen)) {
+            onViewResult("ImagePresenter", "读取校正数据失败");
         }
 
-//        ImageProUtils.getImageArray(pixelGain, secondFrameBuf);
+        ImageProUtils.getImageArray(pixelGain, secondFrameBuf);
         if (!imageModel.readConfig(cySysConfig)) {
-            CommonUtils.showToastMsg(null, "readConfig");
+            onViewResult("ImagePresenter", "读取配置数据失败");
         }
+        cySysConfig.m_fZeroTemp=imageModel.readZeroTemp();
 
         return true;
-    }
-
-    private void grayToTemp(CySystemConfig systemConfig,short[] buf, boolean bool) {
-        if (bool) {
-            for (int i = 0; i < imageSize; ++i) {
-                tempCollect[i] = (buf[i] - systemConfig.m_swZeroGray) * systemConfig.m_TempSlop + systemConfig.m_fZeroTemp + systemConfig.m_TempOffset;
-            }
-        } else {
-            for (int i = 0; i < imageSize; ++i) {
-                float temp = 36 - systemConfig.m_fZeroTemp; //外置黑体温度（36°）与挡片温度差
-                float outBlackGray = systemConfig.m_VtempSlop * temp + systemConfig.m_fVtempToGray * temp * temp + systemConfig.m_VtempOffset; //计算外置黑体灰度
-                outBlackGray += systemConfig.m_swZeroGray;
-                temp = systemConfig.m_fZeroTemp * systemConfig.m_VtempSlop + systemConfig.m_TempOffset; //根据挡片计算不同环境温度下的温度修正系数
-                tempCollect[i] = (buf[i] - outBlackGray) * temp + systemConfig.m_fHum + 36; //计算目标温度值
-            }
-        }
     }
 
     public void removeImageCorrect() {
@@ -393,7 +388,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      * @return
      */
     private boolean getImagePack(boolean bool) {
-        ++frequency[0];
+        CommonUtils.setFrequency(0);
         if (bool) {
             getFrameData();
             synchronized (this) {
@@ -444,35 +439,18 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
     /**
      * 未使用到的函数
      */
-    public Bitmap createImage(short[] imageSource) {
-        ++frequency[1] ;
-        for (int i = 0; i < pixelBuf.length; ++i) {
-            pixelBuf[i] = imageSource[i];
+    public Bitmap createBitmap(short[] imageSource) {
+        for(int i=0;i<imageSource.length;++i){
+            pixelBuf[i]=imageSource[i];
         }
-        ImageProUtils.setArrayARGB(pixelBuf, true);
-        Bitmap bitmap = Bitmap.createBitmap(pixelBuf, imageWidth, imageHight,
-                Bitmap.Config.ARGB_8888);
-        return bitmap;
+        return createBitmap(pixelBuf);
     }
 
-    public Bitmap createImage(int[] imageSource) {
-        ImageProUtils.setArrayARGB(imageSource, false);
-        Bitmap bitmap = Bitmap.createBitmap(imageSource, imageWidth, imageHight,
+    public Bitmap createBitmap(int[] imageSource) {
+        CommonUtils.setFrequency(1);
+        ImageProUtils.setArrayARGB(imageSource, true);
+        return Bitmap.createBitmap(imageSource, imageWidth, imageHight,
                 Bitmap.Config.ARGB_8888);
-        return bitmap;
-    }
-
-    public int[] getFrequency() {
-        int[] fre=new int[2];
-        long curTimeMillis = System.currentTimeMillis();
-        int intervaTime = (int) (curTimeMillis - preTimeMillis);
-        preTimeMillis = curTimeMillis;
-
-        fre[0] = frequency[0] * 1000 / 16 / intervaTime;
-        fre[1] = frequency[1] * 1000 / intervaTime;
-        frequency[0] = 0;
-        frequency[1] = 0;
-        return fre;
     }
 
     public void getFrameData() {
@@ -495,6 +473,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
             }
         }
     }
+
     /******************************************/
     @Override
     public boolean isConnected() {
@@ -502,23 +481,23 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
     }
 
     @Override
-    public boolean setFocusing(boolean size,boolean range) {
-        return imageModel.setFocusing(size,range);
+    public boolean setFocusing(boolean size, boolean range) {
+        return imageModel.setFocusing(size, range);
     }
 
     @Override
     public int cameraPower(boolean enable) {
-        if(enable) {
-            if(!isConnected()){
+        if (enable) {
+            if (!isConnected()) {
                 return 1;
             }
-            if(!imageModel.cameraPower(enable)){
+            if (!imageModel.cameraPower(enable)) {
                 return 2;
             }
             threadInit();
-        }else {
+        } else {
             threadClose();
-            if(!imageModel.cameraPower(enable)){
+            if (!imageModel.cameraPower(enable)) {
                 return 3;
             }
         }
