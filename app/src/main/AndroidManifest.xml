@@ -25,13 +25,6 @@
                 <!--android:name="android.hardware.usb.action.USB_DEVICE_ATTACHED"-->
                 <!--android:resource="@xml/device_filter" />-->
          </activity>
-        <activity android:name="com.usb.view.ImageActivity">
-            <intent-filter>
-                <action android:name="android.intent.usb.image" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-
-        </activity>
 
         <receiver
             android:name="com.usb.model.UsbReceiver"

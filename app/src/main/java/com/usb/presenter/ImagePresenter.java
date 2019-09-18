@@ -155,7 +155,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
         if (!isConnected() || !getImageFrame(pixelSbuf, 0)) {
             return 4;
         }
-        grayToTemp(cySysConfig, pixelSbuf, true);
+        cySysConfig.grayToTemp(pixelSbuf, tempCollect,false);
         ImageProUtils.setImageOffset(pixelSbuf, pixelGain, pixelOffset);
         ImageProUtils.MedianFlitering(pixelSbuf, buf, imageWidth, imageHight, 3);
 
@@ -238,7 +238,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
                 PixelSum[j] += pixelBuf[j];
             }
         }
-        ImageProUtils.NonUniformCorrection(PixelSum, pixelGain, pixelOffset, aveCount);
+        cySysConfig.m_swZeroGray= ImageProUtils.NonUniformCorrection(PixelSum, pixelGain, pixelOffset, aveCount);
 
         Arrays.fill(PixelSum, 0);
         imageModel.steeringEngine(true);
@@ -286,27 +286,13 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
             onViewResult("ImagePresenter", "读取校正数据失败");
         }
 
-//        ImageProUtils.getImageArray(pixelGain, secondFrameBuf);
+        ImageProUtils.getImageArray(pixelGain, secondFrameBuf);
         if (!imageModel.readConfig(cySysConfig)) {
             onViewResult("ImagePresenter", "读取配置数据失败");
         }
-        return true;
-    }
+        cySysConfig.m_fZeroTemp=imageModel.readZeroTemp();
 
-    private void grayToTemp(CySystemConfig systemConfig, short[] buf, boolean bool) {
-        if (bool) {
-            for (int i = 0; i < imageSize; ++i) {
-                tempCollect[i] = (buf[i] - systemConfig.m_swZeroGray) * systemConfig.m_TempSlop + systemConfig.m_fZeroTemp + systemConfig.m_TempOffset;
-            }
-        } else {
-            for (int i = 0; i < imageSize; ++i) {
-                float temp = 36 - systemConfig.m_fZeroTemp; //外置黑体温度（36°）与挡片温度差
-                float outBlackGray = systemConfig.m_VtempSlop * temp + systemConfig.m_fVtempToGray * temp * temp + systemConfig.m_VtempOffset; //计算外置黑体灰度
-                outBlackGray += systemConfig.m_swZeroGray;
-                temp = systemConfig.m_fZeroTemp * systemConfig.m_VtempSlop + systemConfig.m_TempOffset; //根据挡片计算不同环境温度下的温度修正系数
-                tempCollect[i] = (buf[i] - outBlackGray) * temp + systemConfig.m_fHum + 36; //计算目标温度值
-            }
-        }
+        return true;
     }
 
     public void removeImageCorrect() {
