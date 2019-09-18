@@ -3,17 +3,17 @@ package com.usb.view;
 import android.os.Bundle;
 import android.widget.RadioGroup;
 
-import androidx.fragment.app.FragmentActivity;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
-
 import com.usb.common.CommonUtils;
+import com.usb.model.R;
 import com.usb.view.fragment.BaseFragment;
 import com.usb.view.fragment.ImagePager;
 import com.usb.view.fragment.MainPager;
-import com.usb.model.R;
 
 import java.util.ArrayList;
+
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
 
 public class MainActivity extends FragmentActivity {
 
