@@ -48,33 +48,36 @@ public class CySystemConfig {
     }
 
     private int byteToint(byte[] buf) {
-        int data = buf[byteIndex] | (buf[byteIndex + 1] << 8) | (buf[byteIndex + 2] << 16) | (buf[byteIndex + 3] << 24);
+        int data =(buf[byteIndex]&0xff) |  ((buf[byteIndex + 1]&0xff) << 8) |  ((buf[byteIndex + 2]&0xff) << 16) |  ((buf[byteIndex + 3]&0xff) << 24);
         byteIndex += 4;
         return data;
     }
 
     private void byteToint(byte[] buf, int[] ibuf, int num) {
         for (int i = 0; i < num; ++i) {
-            ibuf[i] = buf[byteIndex] | (buf[byteIndex + 1] << 8) | (buf[byteIndex + 2] << 16) | (buf[byteIndex + 3] << 24);
+            ibuf[i] = (buf[byteIndex]&0xff) |  ((buf[byteIndex + 1]&0xff) << 8) |  ((buf[byteIndex + 2]&0xff) << 16) |  ((buf[byteIndex + 3]&0xff) << 24);
             byteIndex += 4;
         }
     }
 
     private float byteTofloat(byte[] buf) {
-        float data = buf[byteIndex] | (buf[byteIndex + 1] << 8) | (buf[byteIndex + 2] << 16) | (buf[byteIndex + 3] << 24);
+        int val = (buf[byteIndex]&0xff) |  ((buf[byteIndex + 1]&0xff) << 8) |  ((buf[byteIndex + 2]&0xff) << 16) |  ((buf[byteIndex + 3]&0xff) << 24);
+        float data =Float.intBitsToFloat(val);
         byteIndex += 4;
         return data;
     }
 
     private void byteTofloat(byte[] buf, float[] fbuf, int num) {
         for (int i = 0; i < num; ++i) {
-            fbuf[i] = buf[byteIndex] | (buf[byteIndex + 1] << 8) | (buf[byteIndex + 2] << 16) | (buf[byteIndex + 3] << 24);
+            int val = (buf[byteIndex]&0xff) |  ((buf[byteIndex + 1]&0xff) << 8) |  ((buf[byteIndex + 2]&0xff) << 16) |  ((buf[byteIndex + 3]&0xff) << 24);
+            fbuf[i] =Float.intBitsToFloat(val);
             byteIndex += 4;
         }
     }
 
 
     public boolean byteToConfig(byte[] configData) {
+
         byteIndex = 0;
         m_nInt = byteToint(configData);
         m_nAreaNo = byteToint(configData);//当前分区
@@ -117,4 +120,21 @@ public class CySystemConfig {
         }
         return true;
     }
+
+    public void grayToTemp(short[] source,float[] target, boolean bool) {
+        if (bool) {
+            for (int i = 0; i < source.length; ++i) {
+                target[i] = (source[i] - m_swZeroGray) * m_TempSlop + m_fZeroTemp + m_TempOffset;
+            }
+        } else {
+            for (int i = 0; i < source.length; ++i) {
+                float temp = 36 - m_fZeroTemp; //外置黑体温度（36°）与挡片温度差
+                float outBlackGray = m_VtempSlop * temp + m_fVtempToGray * temp * temp + m_VtempOffset; //计算外置黑体灰度
+                outBlackGray += m_swZeroGray;
+                temp = m_fZeroTemp * m_TempSlop +m_TempOffset; //根据挡片计算不同环境温度下的温度修正系数
+                target[i] = (source[i] - outBlackGray) * temp + m_fHum + 36; //计算目标温度值
+            }
+        }
+    }
+
 }

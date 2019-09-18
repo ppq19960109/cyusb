@@ -3,7 +3,7 @@ package com.usb.usblibrary;
 import android.content.Context;
 
 public class ImageModel implements ImageContract.IImageModel {
-    private static ImageModel imageModelInstance = new ImageModel();
+    private static ImageModel Instance = new ImageModel();
 
     private final int
             DIR_TO_DEVICE = 0,
@@ -22,7 +22,7 @@ public class ImageModel implements ImageContract.IImageModel {
     private final int USBCONREAD = DIR_FROM_DEVICE | REQ_VENDOR | TGT_DEVICE;
     private final int BULKMAXLEN = 16384;
     private final int CONTROLTIMEOUT = 1000;
-    private CyUsbDevice cyUsbDevice;
+    private UsbDeviceUtils usbDevice;
     String[] usbConnnectInfo = {
             "USB成功连接",
             "USB已经连接",
@@ -44,55 +44,55 @@ public class ImageModel implements ImageContract.IImageModel {
     };
 
     private ImageModel() {
-        cyUsbDevice = CyUsbDevice.getInstance();
+        usbDevice = UsbDeviceUtils.getInstance();
     }
 
     public static ImageModel getInstance() {
-        return imageModelInstance;
+        return Instance;
     }
 
     @Override
     public boolean isConnected() {
-        return cyUsbDevice.isUsbConnected();
+        return usbDevice.isUsbConnected();
     }
 
     @Override
-    public boolean openUsbDevice(Context context, int index,ImageContract.CallBack callBack) {
-        int err= cyUsbDevice.openUsbDevice(context, 0x4b4, 0xf1);
-        if(callBack!=null) {
-            callBack.onResult("openUsbDevice", usbConnnectInfo[err]);
+    public boolean openUsbDevice(Context context, int index, ImageContract.CallBack callBack) {
+        int err = usbDevice.openUsbDevice(context, 0x4b4, 0xf1);
+        if (callBack != null) {
+            callBack.onResult("ImageModel", usbConnnectInfo[err]);
         }
-        return err==0?true:false;
+        return err == 0 ? true : false;
     }
 
     @Override
     public void close() {
-        cyUsbDevice.usbClose();
+        usbDevice.close();
     }
 
     @Override
     public boolean ControlTransfer(int requestType, int request, int value,
                                    int index, byte[] buffer, int length, int timeout) {
-         int err=cyUsbDevice.controlTransfer(requestType, request, value, index, buffer, length, timeout);
+        int err = usbDevice.controlTransfer(requestType, request, value, index, buffer, length, timeout);
 
-        return err==0?true:false;
+        return err == 0 ? true : false;
     }
 
     @Override
     public int bulkTransfer(int endpoint, byte[] buffer, final int length,
                             int timeout) {
         if (length < BULKMAXLEN) {
-            return cyUsbDevice.bulkTransfer(endpoint, buffer, length, timeout);
+            return usbDevice.bulkTransfer(endpoint, buffer, length, timeout);
         } else {
             int transferLen = 0, len = 0;
             byte[] bulkBuf = new byte[BULKMAXLEN];
             while (transferLen < length) {
                 if (transferLen + BULKMAXLEN > length) {
-                    if ((len = cyUsbDevice.bulkTransfer(endpoint, bulkBuf, length - transferLen, timeout)) != length - transferLen) {
+                    if ((len = usbDevice.bulkTransfer(endpoint, bulkBuf, length - transferLen, timeout)) != length - transferLen) {
                         return transferLen;
                     }
                 } else {
-                    if ((len = cyUsbDevice.bulkTransfer(endpoint, bulkBuf, BULKMAXLEN, timeout)) != BULKMAXLEN) {
+                    if ((len = usbDevice.bulkTransfer(endpoint, bulkBuf, BULKMAXLEN, timeout)) != BULKMAXLEN) {
                         return transferLen;
                     }
                 }
@@ -133,6 +133,19 @@ public class ImageModel implements ImageContract.IImageModel {
         }
 
         return sysConfig.byteToConfig(buf);
+    }
+    @Override
+    public float readZeroTemp() {
+        int cmd, len = 4;
+        byte[] buf = new byte[4];
+        cmd = usbCmdToData(0x12, 0, 0);
+        if (!ControlTransfer(USBCONREAD, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, len, CONTROLTIMEOUT)) {
+            return 0;
+        }
+        int temp=(buf[0]&0xff)|((buf[1]&0xff)<<8)|((buf[2]&0xff)<<16)|((buf[3]&0xff)<<24);
+
+        float ftemp =(float)((temp&0xffff)*0.0625);
+        return ftemp;
     }
 
     @Override
@@ -187,24 +200,25 @@ public class ImageModel implements ImageContract.IImageModel {
         return true;
     }
 
-    public boolean controlTransferWriteCmd(int cmd){
+    public boolean controlTransferWriteCmd(int cmd) {
         byte[] buf = new byte[4];
         if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
             return false;
         }
         return true;
     }
+
     @Override
-    public boolean setFocusing(boolean size,boolean range) {
+    public boolean setFocusing(boolean size, boolean range) {
         int cmd;
         byte[] buf = new byte[4];
-        if(size) {
+        if (size) {
             if (range) {
                 cmd = usbCmdToData(0x13, 0, 2);
             } else {
                 cmd = usbCmdToData(0x13, 0, 1);
             }
-        }else {
+        } else {
             if (range) {
                 cmd = usbCmdToData(0x13, 0, 6);
             } else {
@@ -221,12 +235,12 @@ public class ImageModel implements ImageContract.IImageModel {
     public boolean cameraPower(boolean enable) {
         int cmd;
         byte[] buf = new byte[4];
-        if(enable){
+        if (enable) {
             cmd = usbCmdToData(0xAA, 0, 1);
             if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
                 return false;
             }
-        }else {
+        } else {
             cmd = usbCmdToData(0xAA, 0, 0);
             if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
                 return false;
@@ -251,11 +265,6 @@ public class ImageModel implements ImageContract.IImageModel {
     private int usbCmdToData(int CMD, int Param1, int Param2) {
         return ((CMD & 0xff) << 24) | ((Param1 & 0x0f) << 20) | (Param2 & 0xfffff);
     }
-
-
-    /**
-     * 未使用到的函数
-     */
 
 }
 
