@@ -3,6 +3,10 @@ package com.usb.view;
 import android.os.Bundle;
 import android.widget.RadioGroup;
 
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentTransaction;
+
 import com.usb.common.CommonUtils;
 import com.usb.model.R;
 import com.usb.view.fragment.BaseFragment;
@@ -10,10 +14,6 @@ import com.usb.view.fragment.ImagePager;
 import com.usb.view.fragment.MainPager;
 
 import java.util.ArrayList;
-
-import androidx.fragment.app.FragmentActivity;
-import androidx.fragment.app.FragmentManager;
-import androidx.fragment.app.FragmentTransaction;
 
 public class MainActivity extends FragmentActivity {
 
@@ -31,6 +31,17 @@ public class MainActivity extends FragmentActivity {
         baseFragment.add(new MainPager(this));
         baseFragment.add(new ImagePager(this));
         rgToolbar.check(R.id.rb_main);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+    }
+
+    @Override
+    public void onWindowFocusChanged(boolean hasFocus) {
+        super.onWindowFocusChanged(hasFocus);
+
     }
 
     private void initView() {
