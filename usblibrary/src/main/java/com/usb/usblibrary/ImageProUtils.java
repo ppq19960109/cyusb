@@ -19,7 +19,7 @@ public class ImageProUtils {
     public static void setArrayARGB(int[] pixel, Boolean pseudoColor) {
         if (pseudoColor) {
             for (int i = 0; i < pixel.length; ++i) {
-                pixel[i] = grayToRGB(pixel[i]);
+                pixel[i] = grayToRGB(pixel[i], 2);
             }
         } else {
             for (int i = 0; i < pixel.length; ++i) {
@@ -46,22 +46,21 @@ public class ImageProUtils {
         }
     }
 
-    public static boolean setImageOffset(short[] imageArray, short[] gainArray, short[] offsetArray) {
-        if (imageArray.length != offsetArray.length) {
+    public static boolean setImageOffset(short[] sourceArray, short[] targetArray, short[] gainArray, short[] offsetArray) {
+        if (sourceArray.length != offsetArray.length) {
             return false;
         }
-        for (int i = 0; i < imageArray.length; ++i) {
+        for (int i = 0; i < sourceArray.length; ++i) {
             if ((gainArray[i] & 0x8000) == 0x8000) {
                 if (i > 0) {
-                    imageArray[i] = imageArray[i - 1];
+                    targetArray[i] = sourceArray[i - 1];
                 }
             } else {
-                if(gainArray[i]<0x1000){
-                    gainArray[i]= 0x1000;
+                if (gainArray[i] < 0x1000) {
+                    gainArray[i] = 0x1000;
                 }
-                imageArray[i] = (short) (imageArray[i] * gainArray[i] / 0x1000 + offsetArray[i]);
+                targetArray[i] = (short) (sourceArray[i] * gainArray[i] / 0x1000 + offsetArray[i]);
             }
-//            imageArray[i] +=offsetArray[i];
         }
         return true;
     }
@@ -237,32 +236,96 @@ public class ImageProUtils {
      * @param gray
      * @return
      */
-    public static int grayToRGB(int gray) {
-        int red, green, blue;
+    public static int grayToRGB(int gray, int index) {
+        int red = 0, green = 0, blue = 0;
         gray &= 0xff;
-        //red
-        if (gray < 128) {
-            red = 0;
-        } else if (gray < 192) {
-            red = 255 / 64 * (gray - 128);
-        } else {
-            red = 255;
-        }
-        //green
-        if (gray < 64) {
-            green = 255 / 64 * gray;
-        } else if (gray < 192) {
-            green = 255;
-        } else {
-            green = -255 / 63 * (gray - 192) + 255;
-        }
-        //blue
-        if (gray < 64) {
-            blue = 255;
-        } else if (gray < 128) {
-            blue = -255 / 63 * (gray - 192) + 255;
-        } else {
-            blue = 0;
+        switch (index) {
+            case 0:
+                //red
+                if (gray < 128) {
+                    red = 0;
+                } else if (gray < 192) {
+                    red = 255 / 64 * (gray - 128);
+                } else {
+                    red = 255;
+                }
+                //green
+                if (gray < 64) {
+                    green = 255 / 64 * gray;
+                } else if (gray < 192) {
+                    green = 255;
+                } else {
+                    green = -255 / 63 * (gray - 192) + 255;
+                }
+                //blue
+                if (gray < 64) {
+                    blue = 255;
+                } else if (gray < 128) {
+                    blue = -255 / 63 * (gray - 192) + 255;
+                } else {
+                    blue = 0;
+                }
+                break;
+            case 1:
+                red = Math.abs(0 - gray);
+                green = Math.abs(127 - gray);
+                blue = Math.abs(255 - gray);
+                break;
+            case 2:
+                //red
+                if (gray < 128) {
+                    red = 0;
+                } else if (gray < 192) {
+                    red = 4 * gray - 510;
+                } else {
+                    red = 255;
+                }
+                //green
+                if (gray < 64) {
+                    green = 254 - 4 * gray;
+                } else if (gray < 128) {
+                    green = 4 * gray - 254;
+                } else if (gray < 192) {
+                    green = 1022 - 4 * gray;
+                } else {
+                    green = -255 / 63 * (gray - 192) + 255;
+                }
+                //blue
+                if (gray < 64) {
+                    blue = 255;
+                } else if (gray < 128) {
+                    blue = 510 - 4 * gray;
+                } else {
+                    blue = 0;
+                }
+                break;
+            case 3:
+                if (gray <= 51) {
+                    blue = 255;
+                    green = gray * 5;
+                    red = 0;
+                } else if (gray <= 102) {
+                    gray -= 51;
+                    blue = 255 - gray * 5;
+                    green = 255;
+                    red = 0;
+                } else if (gray <= 153) {
+                    gray -= 102;
+                    blue = 0;
+                    green = 255;
+                    red = gray * 5;
+                } else if (gray <= 204) {
+                    gray -= 153;
+                    blue = 0;
+                    green = 255 - setPixelRange((int) (gray * 128.0 / 51 + 0.5));
+                    red = 255;
+                } else if (gray <= 255) {
+                    gray -= 204;
+                    blue = 0;
+                    green = 127 - setPixelRange((int) (gray * 127.0 / 51 + 0.5));
+                    red = 255;
+                }
+                break;
         }
         return setARGB(red, green, blue);
     }
@@ -414,7 +477,7 @@ public class ImageProUtils {
         for (int i = 0; i < len; ++i) {
             sum += array[i] * template[i];
         }
-        return setPixelRange((short) sum);
+        return (short) sum;
     }
 
     public static void GaussianFilter(short[] src, short[] dst, int width, int hight, int ksize, double sigma) {
@@ -426,6 +489,70 @@ public class ImageProUtils {
                 if ((x > 1) && (y > 1) && (y + 1 < hight) && (x + 1 < width)) {
                     getKernel(src, width, x, y, kernel, ksize);
                     dst[y * width + x] = getGaussian(kernel, template, ksize);
+                } else {
+                    dst[y * width + x] = src[y * width + x];
+                }
+            }
+        }
+    }
+
+//    static double[] colorTemplate = new double[256];
+//    static double colorSigma = 0;
+//
+//    public static void generateColorTemplate(double sigma) {
+//        if (colorSigma == 0 || colorSigma == sigma) {
+//            return;
+//        }
+//        colorSigma = sigma;
+//        final double sigma2 = -0.5 * sigma * sigma;
+//        for (int i = 0; i < 256; ++i) {
+//            colorTemplate[i] = Math.exp(i * i * sigma2);
+//        }
+//    }
+
+
+    public static void generateSpaceTemplate(double template[], int kssize, double sigma2) {
+        int center = kssize / 2; // 模板的中心位置，也就是坐标的原点
+        double x2, y2;
+        for (int y = 0; y < kssize; ++y) {
+            x2 = y - center;
+            x2 = x2 * x2;
+            for (int x = 0; x < kssize; ++x) {
+                y2 = x - center;
+                y2 = y2 * y2;
+                template[y * kssize + x] = Math.exp(-(x2 + y2) * sigma2);
+            }
+        }
+    }
+
+    public static short getBilateral(short array[], double[] template, int len, double sigma2) {
+        final short center=array[len / 2];
+        double sum = 0, weightSum = 0;
+        double weight;
+        int gray;
+        for (int i = 0; i < len; ++i) {
+            gray = array[i] - center;
+            weight = Math.exp(gray * gray * sigma2);
+            weight = template[i] * weight;
+            sum += array[i] * weight;
+            weightSum += weight;
+        }
+        return (short) (sum / weightSum);
+    }
+
+    public static void BilateralFilter(short[] src, short[] dst, int width, int hight, int ksize, double spaceSigma, double colorSigma) {
+        final double spaceSigma2 = -0.5 * spaceSigma * spaceSigma;
+        final double colorSigma2 = -0.5 * colorSigma * colorSigma;
+        double[] spaceTemplate = new double[9];
+        short[] kernel = new short[9];
+
+        generateSpaceTemplate(spaceTemplate, ksize / 3, spaceSigma2);
+
+        for (int y = 0; y < hight; ++y) {
+            for (int x = 0; x < width; ++x) {
+                if ((x > 1) && (y > 1) && (y + 1 < hight) && (x + 1 < width)) {
+                    getKernel(src, width, x, y, kernel, ksize);
+                    dst[y * width + x] = getBilateral(kernel, spaceTemplate, ksize, colorSigma2);
                 } else {
                     dst[y * width + x] = src[y * width + x];
                 }
@@ -462,6 +589,7 @@ public class ImageProUtils {
 
     /**
      * 打死点标记
+     *
      * @param grayData
      * @param x
      * @param y

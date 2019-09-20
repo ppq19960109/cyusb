@@ -30,7 +30,8 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
     private volatile boolean frameFlag;     //获取一帧图像标志
     private int prePackIndex; //上一个图像数据包的序号
 
-    private short[] pixelSbuf;
+    private short[] pixelShortSource;
+    private short[] pixelShortCorrection;
     private int[] pixelBuf;
     private short[] pixelOffset;
     private short[] pixelGain;
@@ -65,7 +66,8 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
         firstFrameBuf = new byte[imageByteLen];
         secondFrameBuf = new byte[imageByteLen];
 
-        pixelSbuf = new short[imageSize];
+        pixelShortSource = new short[imageSize];
+        pixelShortCorrection = new short[imageSize];
         pixelBuf = new int[imageSize];
         pixelOffset = new short[imageSize];
         pixelGain = new short[imageSize];
@@ -147,22 +149,20 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      * 2: Read image of size 0
      * 3: Recieved image size is not equal to requested size
      * 4: Data read fail
-     * @throws InterruptedException
      */
     @Override
     public int recvImage(short[] buf, boolean agc) {
 
-        if (!isConnected() || !getImageFrame(pixelSbuf, 0)) {
+        if (!isConnected() || !getImageFrame(pixelShortSource, 0)) {
             return 4;
         }
-        cySysConfig.grayToTemp(pixelSbuf, tempCollect,false);
-        ImageProUtils.setImageOffset(pixelSbuf, pixelGain, pixelOffset);
-        ImageProUtils.MedianFlitering(pixelSbuf, buf, imageWidth, imageHight, 3);
 
+        ImageProUtils.setImageOffset(pixelShortSource, pixelShortCorrection,pixelGain, pixelOffset);
+        ImageProUtils.MedianFlitering(pixelShortCorrection, buf, imageWidth, imageHight, 3);
+//        ImageProUtils.GaussianFilter(pixelShortCorrection,buf,imageWidth,imageHight,9,0.7);
+//        ImageProUtils. BilateralFilter(pixelShortCorrection,buf,imageWidth,imageHight,9,8,3);
         ImageProUtils.setRGBRange(buf, 2000, 20000);
 
-//        GaussianFilter(pixelsBuf,buf,imageWidth,imageHight,9,1.2);
-//        AverFiltering(pixelsBuf,buf,imageWidth,imageHight);
 
         if (agc) {
 //            setContrast(buf, 1f, 0);
@@ -194,10 +194,12 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      */
     @Override
     public float calcTemp(short x, short y) {
-        if (!isConnected()) {
-            return 0;
+        if (isConnected()) {
+            synchronized (this) {
+                return cySysConfig.grayToTemp(pixelShortSource[x + y * imageWidth],  false);
+            }
         }
-        return tempCollect[x + y * imageWidth];
+        return 0;
     }
 
     /**
@@ -207,10 +209,11 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      */
     @Override
     public void calcTemp(float[] buf) {
-        if (!isConnected()) {
-            Arrays.fill(tempCollect, 0);
+        if (isConnected()) {
+            synchronized (this) {
+                cySysConfig.grayToTemp(pixelShortSource, buf, false);
+            }
         }
-        System.arraycopy(tempCollect, 0, buf, 0, buf.length);
     }
 
     /**

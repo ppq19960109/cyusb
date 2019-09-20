@@ -31,6 +31,7 @@ public class MainActivity extends FragmentActivity {
         baseFragment.add(new MainPager(this));
         baseFragment.add(new ImagePager(this));
         rgToolbar.check(R.id.rb_main);
+
     }
 
     @Override
