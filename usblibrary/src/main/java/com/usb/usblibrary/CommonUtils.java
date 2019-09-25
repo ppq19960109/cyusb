@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.os.Handler;
 import android.os.Looper;
 import android.widget.Toast;
 
@@ -13,9 +14,10 @@ public class CommonUtils {
      * 调试标志
      */
     private static boolean debugFlag = true;
-    public static Context debugContext;
+    public static Context debugContext=null;
     private static long preTimeMillis;
     private static int[] frequencyCount = new int[2];
+    private static final Handler handler = new Handler();
 
     private CommonUtils() {
     }
@@ -35,8 +37,8 @@ public class CommonUtils {
      * @param context
      * @param msg
      */
-    public static void showToastMsg(Context context, String msg) {
-        if (debugFlag == false || isInMainThread() == false) {
+    public static void showToastMsg(Context context,final String msg) {
+        if (debugFlag == false ) {
             return;
         }
         if (context == null) {
@@ -46,12 +48,24 @@ public class CommonUtils {
                 context = debugContext;
             }
         }
+
 //        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
 //            if(context.isDestroyed()){
 //                return;
 //            }
 //        }
-        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+        if( isInMainThread()) {
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();
+        }else {
+            handler.post(new Runnable() {
+                @Override
+                public void run() {
+                    if (debugContext != null) {
+                        Toast.makeText(debugContext, msg, Toast.LENGTH_SHORT).show();
+                    }
+                }
+            });
+        }
     }
 
     /**

@@ -121,7 +121,12 @@ public class TE_A implements ImageContract.ITE_A {
      */
     @Override
     public int cameraPower(boolean enable) {
-        return imagePresenter.cameraPower(enable);
+        try {
+            return imagePresenter.cameraPower(enable);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return 0;
     }
 
     /**
@@ -152,6 +157,5 @@ public class TE_A implements ImageContract.ITE_A {
     public void onResult(String tag, String msg) {
         CommonUtils.showToastMsg(null, tag + ":" + msg);
     }
-
 
 }

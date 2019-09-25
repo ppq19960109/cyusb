@@ -67,13 +67,11 @@ public interface ImageContract {
 
         boolean setFocusing(boolean size, boolean range);
 
-        int cameraPower(boolean enable);
+        int cameraPower(boolean enable)throws InterruptedException;
 
         boolean connectToPC();
 
         Bitmap createBitmap(short[] buf);
-
-        Bitmap createBitmap(int[] buf);
 
         void removeImageCorrect();
     }

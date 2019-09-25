@@ -121,7 +121,7 @@ public class CySystemConfig {
         return true;
     }
 
-    public void grayToTemp(short[] source, float[] target, boolean bool) {
+    public void grayToTemp(final short[] source, float[] target, boolean bool) {
         if (bool) {
             for (int i = 0; i < source.length; ++i) {
                 target[i] = grayToTemp(source[i],true);
@@ -133,7 +133,7 @@ public class CySystemConfig {
         }
     }
 
-    public float grayToTemp(short source, boolean bool) {
+    public float grayToTemp(final short source, boolean bool) {
         if (bool) {
             return (source - m_swZeroGray) * m_TempSlop + m_fZeroTemp + m_TempOffset;
         } else {

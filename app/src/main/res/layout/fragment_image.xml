@@ -55,29 +55,34 @@
 
         <ImageView
             android:id="@+id/iv_image"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
             android:adjustViewBounds="true"
             android:scaleType="fitCenter"
-            android:src="#0000ff"/>
+            android:background="#000000"
+            android:src="#000000"/>
     </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="3"
+        android:layout_weight="2"
         android:orientation="vertical">
-
+        <TextView
+            android:id="@+id/tv_temp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="测温" />
         <TextView
             android:id="@+id/tv_fre"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="图片频率" />
+            android:text="图像频率" />
         <CheckBox
             android:id="@+id/cameraPower"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:checked="false"
+            android:checked="true"
             android:text="摄像机电源" />
 
         <LinearLayout

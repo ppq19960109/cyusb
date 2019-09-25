@@ -46,20 +46,20 @@ public class ImageProUtils {
         }
     }
 
-    public static boolean setImageOffset(short[] sourceArray, short[] targetArray, short[] gainArray, short[] offsetArray) {
+    public static boolean setImageOffset(short[] sourceArray, short[] gainArray, short[] offsetArray) {
         if (sourceArray.length != offsetArray.length) {
             return false;
         }
         for (int i = 0; i < sourceArray.length; ++i) {
             if ((gainArray[i] & 0x8000) == 0x8000) {
                 if (i > 0) {
-                    targetArray[i] = sourceArray[i - 1];
+                    sourceArray[i]=  sourceArray[i - 1];
                 }
             } else {
                 if (gainArray[i] < 0x1000) {
                     gainArray[i] = 0x1000;
                 }
-                targetArray[i] = (short) (sourceArray[i] * gainArray[i] / 0x1000 + offsetArray[i]);
+                sourceArray[i]=(short) (sourceArray[i] * gainArray[i] / 0x1000 + offsetArray[i]);
             }
         }
         return true;

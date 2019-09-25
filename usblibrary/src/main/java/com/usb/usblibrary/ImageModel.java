@@ -21,7 +21,7 @@ public class ImageModel implements ImageContract.IImageModel {
     private final int USBCONWRITE = DIR_TO_DEVICE | REQ_VENDOR | TGT_DEVICE;
     private final int USBCONREAD = DIR_FROM_DEVICE | REQ_VENDOR | TGT_DEVICE;
     private final int BULKMAXLEN = 16384;
-    private final int CONTROLTIMEOUT = 1000;
+    private final int CONTROLTIMEOUT = 500;
     private UsbDeviceUtils usbDevice;
     String[] usbConnnectInfo = {
             "USB成功连接",
@@ -158,7 +158,7 @@ public class ImageModel implements ImageContract.IImageModel {
             return false;
         }
 
-        if ((transLen = bulkTransfer(0x82, outData, len, 10000)) < 0) {
+        if ((transLen = bulkTransfer(0x82, outData, len, 5000)) < 0) {
             return false;
         }
         cmd = usbCmdToData(0x21, 0, 0);

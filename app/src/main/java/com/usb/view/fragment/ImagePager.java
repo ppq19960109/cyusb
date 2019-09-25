@@ -17,14 +17,12 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageView;
-import android.widget.RadioGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.usb.common.CommonUtils;
-import com.usb.common.ImageProUtils;
 import com.usb.model.R;
 import com.usb.presenter.TE_A;
 
@@ -37,10 +35,10 @@ public class ImagePager extends BaseFragment {
 
     private CheckBox cameraPower;
     private TextView tvfrequency;
+    private TextView tv_temp;
     private ImageView imageView;
 
     private TE_A cyImage;
-    private RadioGroup rgFcous;
 
     private BitmapPlayThread BmpPlayThread;
     private Timer timerThread;
@@ -91,10 +89,10 @@ public class ImagePager extends BaseFragment {
         initListener();
 
         cyImage.openTE_A(getActivity(), 0);
-        int ret = cyImage.cameraPower(true);
-        if (ret != 0) {
-            CommonUtils.showToastMsg(getContext(), "cameraPower失败");
+        if (cyImage.cameraPower(true) != 0) {
+            CommonUtils.showToastMsg(getContext(), "打开摄像机电源失败");
         }
+
         view.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
             @Override
             public void onGlobalLayout() {
@@ -112,29 +110,21 @@ public class ImagePager extends BaseFragment {
     }
 
     @Override
-    public void onHiddenChanged(boolean hidden) {
-        super.onHiddenChanged(hidden);
-    }
-
-    @Override
     public void onDestroyView() {
         super.onDestroyView();
         ThreadStop();
+        cyImage.cameraPower(false);
         cyImage.closeTE();
-    }
-
-    @Override
-    public void onDestroy() {
-        super.onDestroy();
-
     }
 
     private void initFindView(View view) {
         cameraPower = view.findViewById(R.id.cameraPower);
+        tv_temp= view.findViewById(R.id.tv_temp);
         tvfrequency = view.findViewById(R.id.tv_fre);
         imageView = view.findViewById(R.id.iv_image);
         cb_play = view.findViewById(R.id.cb_play);
         cb_correct = view.findViewById(R.id.cb_correct);
+
         initRadioGroup(view);
     }
     ;
@@ -228,7 +218,7 @@ public class ImagePager extends BaseFragment {
                     int x = touchX * 384 / v.getWidth();
                     int y = touchY * 288 / v.getHeight();
                     float temp = cyImage.calcTemp((short) x, (short) y);
-                    CommonUtils.showToastMsg(null, "X:" + x + "Y:" + y + "温度:" + temp);
+                    tv_temp.setText("X:" + x + "Y:" + y + "温度:" + temp);
                     return true;
                 }
                 return false;
@@ -244,11 +234,9 @@ public class ImagePager extends BaseFragment {
         timerThread = new Timer();
         timerTask = new BitmapTimerTask();
         timerThread.schedule(timerTask, 0, 1000);
-
     }
 
     private void ThreadStop() {
-
         if (BmpPlayThread != null) {
             BmpPlayThread.cancel(true);
             BmpPlayThread = null;
@@ -265,13 +253,12 @@ public class ImagePager extends BaseFragment {
         protected Void doInBackground(Integer... integer) {
             Bitmap bitmap = null;
             for (; ; ) {
-
                 if (cyImage.recvImage(imagebuf, true) != 1) {
                     continue;
                 }
                 bitmap = cyImage.createBitmap(imagebuf);
 //                bitmap = Bitmap.createScaledBitmap(bitmap, imageView.getWidth()*384/288, imageView.getWidth(), false);
-                bitmap = ImageProUtils.rotateBimap(90, bitmap);
+//                bitmap = ImageProUtils.rotateBimap(90, bitmap);
                 if (bitmap != null) {
                     publishProgress(bitmap);
                 }
