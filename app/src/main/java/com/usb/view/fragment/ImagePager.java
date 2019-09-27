@@ -23,6 +23,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.usb.common.CommonUtils;
+import com.usb.common.ImageProUtils;
 import com.usb.model.R;
 import com.usb.presenter.TE_A;
 
@@ -183,6 +184,17 @@ public class ImagePager extends BaseFragment {
         Log.i("ImagePager","onSaveInstanceState");
     }
 
+    public static void rotate(float degree,int[] coordinate,int width,int height) {
+        if(degree==90){
+            int temp=coordinate[1];
+            coordinate[1] =coordinate[0];
+            coordinate[0]=height-temp;
+        }
+        else if(degree==180) {
+            coordinate[0] = width - 1 - coordinate[0];
+            coordinate[1] = height - 1 - coordinate[1];
+        }
+    }
     private void initListener() {
         cb_play.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             @Override
@@ -200,7 +212,7 @@ public class ImagePager extends BaseFragment {
                 if (isChecked) {
                     cyImage.shutterCalibrationOn();
                 } else {
-                    cyImage.removeImageCorrect();
+                    cyImage.removeCalibrationOn();
                 }
             }
         });
@@ -211,14 +223,17 @@ public class ImagePager extends BaseFragment {
             public boolean onTouch(View v, MotionEvent e) {
                 if (e.getAction() == MotionEvent.ACTION_DOWN) {
                     int[] viewCoord = new int[2];
+                    int[] coord = new int[2];
                     v.getLocationOnScreen(viewCoord);
-                    int touchX = (int) e.getX();
-                    int touchY = (int) e.getY();
 
-                    int x = touchX * 384 / v.getWidth();
-                    int y = touchY * 288 / v.getHeight();
-                    float temp = cyImage.calcTemp((short) x, (short) y);
-                    tv_temp.setText("X:" + x + "Y:" + y + "温度:" + temp);
+                    coord[0] = (int) e.getX();
+                    coord[1] = (int) e.getY();
+
+                    coord[0] = coord[0] * 384 / v.getWidth();
+                    coord[1] = coord[1] * 288 / v.getHeight();
+                    rotate(180,coord,384,288);
+                    float temp = cyImage.calcTemp((short)coord[0], (short) coord[1]);
+                    tv_temp.setText("X:" + coord[0] + "Y:" + coord[1] + "温度:" + temp);
                     return true;
                 }
                 return false;
@@ -258,7 +273,7 @@ public class ImagePager extends BaseFragment {
                 }
                 bitmap = cyImage.createBitmap(imagebuf);
 //                bitmap = Bitmap.createScaledBitmap(bitmap, imageView.getWidth()*384/288, imageView.getWidth(), false);
-//                bitmap = ImageProUtils.rotateBimap(90, bitmap);
+                bitmap = ImageProUtils.rotateBimap(180, bitmap);
                 if (bitmap != null) {
                     publishProgress(bitmap);
                 }

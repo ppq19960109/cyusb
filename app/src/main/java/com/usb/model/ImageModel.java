@@ -25,6 +25,7 @@ public class ImageModel implements ImageContract.IImageModel {
     private final int BULKMAXLEN = 16384;
     private final int CONTROLTIMEOUT = 500;
     private UsbDeviceUtils usbDevice;
+    byte[] buf4byte = new byte[4];
     String[] usbConnnectInfo = {
             "USB成功连接",
             "USB已经连接",
@@ -114,9 +115,8 @@ public class ImageModel implements ImageContract.IImageModel {
      */
     @Override
     public boolean restartDetector() {
-        byte[] buf = new byte[4];
         int cmd = usbCmdToData(0x30, 0, 0);
-        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf4byte, 4, CONTROLTIMEOUT)) {
             return false;
         }
         return true;
@@ -127,36 +127,33 @@ public class ImageModel implements ImageContract.IImageModel {
         if (sysConfig == null) {
             return false;
         }
-        int cmd, len = CySystemConfig.SIZE;
+        int len = CySystemConfig.SIZE;
         byte[] buf = new byte[len];
-        cmd = usbCmdToData(0x18, 0, 0);
+        int cmd = usbCmdToData(0x18, 0, 0);
         if (!ControlTransfer(USBCONREAD, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, len, CONTROLTIMEOUT)) {
             return false;
         }
 
         return sysConfig.byteToConfig(buf);
     }
+
     @Override
     public float readZeroTemp() {
-        int cmd, len = 4;
-        byte[] buf = new byte[4];
-        cmd = usbCmdToData(0x12, 0, 0);
-        if (!ControlTransfer(USBCONREAD, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, len, CONTROLTIMEOUT)) {
+        int cmd = usbCmdToData(0x12, 0, 0);
+        if (!ControlTransfer(USBCONREAD, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf4byte, 4, CONTROLTIMEOUT)) {
             return 0;
         }
-        int temp=(buf[0]&0xff)|((buf[1]&0xff)<<8)|((buf[2]&0xff)<<16)|((buf[3]&0xff)<<24);
+        int temp = (buf4byte[0] & 0xff) | ((buf4byte[1] & 0xff) << 8) | ((buf4byte[2] & 0xff) << 16) | ((buf4byte[3] & 0xff) << 24);
 
-        float ftemp =(float)((temp&0xffff)*0.0625);
+        float ftemp = (float) ((temp & 0xffff) * 0.0625);
         return ftemp;
     }
 
     @Override
     public boolean readNonUniformCorrect(byte[] outData, int len) {
         int cmd, transLen;
-        byte[] buf = new byte[4];
-
         cmd = usbCmdToData(0x16, len >> 20, len);
-        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf4byte, 4, CONTROLTIMEOUT)) {
             return false;
         }
 
@@ -164,7 +161,7 @@ public class ImageModel implements ImageContract.IImageModel {
             return false;
         }
         cmd = usbCmdToData(0x21, 0, 0);
-        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf4byte, 4, CONTROLTIMEOUT)) {
             return false;
         }
         if (transLen != len) {
@@ -176,35 +173,47 @@ public class ImageModel implements ImageContract.IImageModel {
     /**
      * 控制舵机打开与关闭
      *
-     * @param bool
      * @return
      * @throws InterruptedException
      */
     @Override
-    public boolean steeringEngine(boolean bool) throws InterruptedException {
-        int cmd;
-        byte[] buf = new byte[4];
-        if (bool) {
+    public boolean steeringEngine(int index) {
+        int cmd = 0;
+        if (index == 1) {
             cmd = usbCmdToData(0x0b, 0, 2);
-        } else {
+        } else if (index == 2) {
             cmd = usbCmdToData(0x0b, 0, 1);
+        } else if (index == 3) {
+            cmd = usbCmdToData(0x0b, 0, 3);
         }
-        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
-            return false;
-        }
-
-        Thread.sleep(100);
-
-        cmd = usbCmdToData(0x0b, 0, 3);
-        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf4byte, 4, CONTROLTIMEOUT)) {
             return false;
         }
         return true;
     }
 
+    //    public boolean steeringEngine(boolean bool) throws InterruptedException {
+//        int cmd;
+//        byte[] buf = new byte[4];
+//        if (bool) {
+//            cmd = usbCmdToData(0x0b, 0, 2);
+//        } else {
+//            cmd = usbCmdToData(0x0b, 0, 1);
+//        }
+//        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+//            return false;
+//        }
+//
+//        Thread.sleep(100);
+//
+//        cmd = usbCmdToData(0x0b, 0, 3);
+//        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+//            return false;
+//        }
+//        return true;
+//    }
     public boolean controlTransferWriteCmd(int cmd) {
-        byte[] buf = new byte[4];
-        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf4byte, 4, CONTROLTIMEOUT)) {
             return false;
         }
         return true;
@@ -213,7 +222,6 @@ public class ImageModel implements ImageContract.IImageModel {
     @Override
     public boolean setFocusing(boolean size, boolean range) {
         int cmd;
-        byte[] buf = new byte[4];
         if (size) {
             if (range) {
                 cmd = usbCmdToData(0x13, 0, 2);
@@ -227,7 +235,7 @@ public class ImageModel implements ImageContract.IImageModel {
                 cmd = usbCmdToData(0x13, 0, 5);
             }
         }
-        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+        if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf4byte, 4, CONTROLTIMEOUT)) {
             return false;
         }
         return true;
@@ -236,15 +244,14 @@ public class ImageModel implements ImageContract.IImageModel {
     @Override
     public boolean cameraPower(boolean enable) {
         int cmd;
-        byte[] buf = new byte[4];
         if (enable) {
             cmd = usbCmdToData(0xAA, 0, 1);
-            if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+            if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf4byte, 4, CONTROLTIMEOUT)) {
                 return false;
             }
         } else {
             cmd = usbCmdToData(0xAA, 0, 0);
-            if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf, 4, CONTROLTIMEOUT)) {
+            if (!ControlTransfer(USBCONWRITE, 0x05, (cmd >> 16) & 0xffff, cmd & 0xffff, buf4byte, 4, CONTROLTIMEOUT)) {
                 return false;
             }
         }

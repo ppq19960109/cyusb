@@ -11,7 +11,8 @@
         android:theme="@style/AppTheme">
 
         <activity android:name="com.usb.view.MainActivity"
-            android:launchMode="singleTask">
+            android:launchMode="singleTask"
+            android:configChanges="keyboardHidden|orientation|screenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 

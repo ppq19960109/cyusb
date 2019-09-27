@@ -37,7 +37,7 @@ public class CommonUtils {
      * @param context
      * @param msg
      */
-    public static void showToastMsg(Context context, String msg) {
+    public static void showToastMsg(Context context,final String msg) {
         if (debugFlag == false ) {
             return;
         }

@@ -1,6 +1,5 @@
 package com.usb.presenter;
 
-import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
 
@@ -21,9 +20,9 @@ public class TE_A implements ImageContract.ITE_A {
         if (context == null) {
             return;
         }
-        if (context instanceof Activity) {
-            CommonUtils.isGrantExternalRW((Activity) context, 0);
-        }
+//        if (context instanceof Activity) {
+//            CommonUtils.isGrantExternalRW((Activity) context, 0);
+//        }
         CommonUtils.debugContext = context;
 
     }
@@ -49,12 +48,6 @@ public class TE_A implements ImageContract.ITE_A {
     //返回图像灰度数据集合
     @Override
     public int recvImage(short[] buf, boolean agc) {
-        return imagePresenter.recvImage(buf, agc);
-    }
-
-    //返回图像灰度数据集合
-    @Override
-    public int recvImage(int[] buf, boolean agc) {
         return imagePresenter.recvImage(buf, agc);
     }
 
@@ -84,13 +77,16 @@ public class TE_A implements ImageContract.ITE_A {
     @Override
     public boolean shutterCalibrationOn() {
         try {
-            return imagePresenter.imageCorrection(8, 500);
+            return imagePresenter.shutterCalibrationOn(8);
         } catch (Exception e) {
             e.printStackTrace();
         }
         return false;
     }
 
+    public void removeCalibrationOn() {
+        imagePresenter.removeCalibrationOn();
+    }
     //获取摄像头编号
     @Override
     public int getID() {
@@ -124,13 +120,8 @@ public class TE_A implements ImageContract.ITE_A {
      */
     @Override
     public int cameraPower(boolean enable) {
-        try {
-            return imagePresenter.cameraPower(enable);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        return 0;
-    }
+        return imagePresenter.cameraPower(enable);
+      }
 
     /**
      * 断开与android连接，连接PC，
@@ -147,9 +138,6 @@ public class TE_A implements ImageContract.ITE_A {
         return imagePresenter.createBitmap(imageSource);
     }
 
-    public void removeImageCorrect() {
-        imagePresenter.removeImageCorrect();
-    }
 
     public String getFrequency() {
         int[] frequency = CommonUtils.getFrequency();

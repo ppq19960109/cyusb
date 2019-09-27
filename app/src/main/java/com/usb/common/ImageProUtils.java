@@ -37,59 +37,30 @@ public class ImageProUtils {
         }
     }
 
-    public static void getImageArray(int[] imageArray, byte[] byteArray) {
-        int low, high;
-        for (int i = 0; i < imageArray.length && (i * 2 + 1) < byteArray.length; ++i) {
-            low = byteArray[i * 2] & 0xff;
-            high = byteArray[i * 2 + 1] & 0xff;
-            imageArray[i] = low + (high << 8);
+    public static int setGain(short source, short gain) {
+        if (gain < 0x1000) {
+            gain = 0x1000;
         }
+        return source * gain / 0x1000;
+//        return source;
     }
 
-    public static boolean setImageOffset(short[] sourceArray, short[] gainArray, short[] offsetArray) {
+    public static boolean setImageOffset(short[] sourceArray, short[] targetArray, short[] gainArray, short[] offsetArray) {
         if (sourceArray.length != offsetArray.length) {
             return false;
         }
         for (int i = 0; i < sourceArray.length; ++i) {
             if ((gainArray[i] & 0x8000) == 0x8000) {
                 if (i > 0) {
-                    sourceArray[i]=  sourceArray[i - 1];
+                    targetArray[i] = sourceArray[i - 1];
                 }
             } else {
-                if (gainArray[i] < 0x1000) {
-                    gainArray[i] = 0x1000;
-                }
-                sourceArray[i]=(short) (sourceArray[i] * gainArray[i] / 0x1000 + offsetArray[i]);
+                targetArray[i] = (short) (setGain(sourceArray[i], gainArray[i]) + offsetArray[i]);
             }
         }
         return true;
     }
 
-    public static boolean setImageOffset(int[] imageArray, short[] gainArray, short[] offsetArray) {
-        if (imageArray.length != offsetArray.length) {
-            return false;
-        }
-        for (int i = 0; i < imageArray.length; ++i) {
-            if ((gainArray[i] & 0x8000) == 0x8000) {
-                if (i > 0) {
-                    imageArray[i] = imageArray[i - 1];
-                }
-            } else {
-                imageArray[i] = imageArray[i] * gainArray[i] / 0x1000 + offsetArray[i];
-            }
-        }
-        return true;
-    }
-
-    public static short setPixelRange(short pixelValue) {
-        if (pixelValue > 255) {
-            pixelValue = 255;
-        } else if (pixelValue < 0) {
-            pixelValue = 0;
-        } else {
-        }
-        return pixelValue;
-    }
 
     public static int setPixelRange(int pixelValue) {
         if (pixelValue > 255) {
@@ -101,9 +72,8 @@ public class ImageProUtils {
         return pixelValue;
     }
 
-    public static void setRGBRange(short[] rgbPixel, final int minVal, final int maxVal) {
+    public static void setRGBRange(int[] rgbPixel, final int minVal, final int maxVal) {
         int min = maxVal, max = minVal;
-        short index;
         double width;
 
         for (int p : rgbPixel) {
@@ -114,65 +84,18 @@ public class ImageProUtils {
                 max = p;
             }
         }
-//        int window_center =(max+min)/2;
+        //        int window_center =(max+min)/2;
 //        int window_width=max-min;
 //        min   =   (int)((2*window_center   -   window_width)/2.0   +   0.5);
 //        max   =   (int)((2*window_center   +   window_width)/2.0   +   0.5);
-        width = (double) (max - min) / 256;
+        width = (double) (max - min) / 255;
         for (int i = 0; i < rgbPixel.length; ++i) {
             if (rgbPixel[i] <= min) {
                 rgbPixel[i] = 0;
                 continue;
             }
-            index = (short) ((rgbPixel[i] - min) / width);
-            rgbPixel[i] = setPixelRange(index);
+            rgbPixel[i] = (int) ((rgbPixel[i] - min) / width);
         }
-    }
-
-    public static void setRGBRange(int[] rgbPixel, final int minVal, final int maxVal) {
-        int min = maxVal, max = minVal, index;
-        double width;
-
-        for (int p : rgbPixel) {
-            if (min > p && p > minVal) {
-                min = p;
-            }
-            if (max < p && p < maxVal) {
-                max = p;
-            }
-        }
-        width = (double) (max - min) / 256;
-        for (int i = 0; i < rgbPixel.length; ++i) {
-            if (rgbPixel[i] <= min) {
-                rgbPixel[i] = 0;
-                continue;
-            }
-            index = (int) ((rgbPixel[i] - min) / width);
-            rgbPixel[i] = setPixelRange(index);
-        }
-    }
-
-    public static boolean setHist(short[] hist, short[] nHist, float[] pHist, float[] cHist) {
-        if (nHist.length != pHist.length || nHist.length != cHist.length || nHist.length != 256) {
-            return false;
-        }
-        for (int i = 0; i < hist.length; ++i) {
-            ++nHist[setPixelRange(hist[i])];
-        }
-        for (int i = 0; i < 256; ++i) {
-            pHist[i] = (float) nHist[i] / hist.length;
-        }
-        for (int i = 0; i < 256; ++i) {
-            for (int j = 0; j <= i; ++j) {
-                cHist[i] += pHist[j];
-            }
-        }
-        for (int i = 0; i < hist.length; ++i) {
-            hist[i] = (short) (255 * cHist[hist[i]]);
-        }
-        Arrays.fill(nHist, (short) 0);
-        Arrays.fill(cHist, 0);
-        return true;
     }
 
     public static boolean setHist(int[] hist, short[] nHist, float[] pHist, float[] cHist) {
@@ -196,12 +119,6 @@ public class ImageProUtils {
         Arrays.fill(nHist, (short) 0);
         Arrays.fill(cHist, 0);
         return true;
-    }
-
-    public static void setContrast(short[] Pixel, float Contrast, int bright) {
-        for (int i = 0; i < Pixel.length; ++i) {
-            Pixel[i] = (short) (Pixel[i] * Contrast + bright);
-        }
     }
 
     public static void setContrast(int[] Pixel, float Contrast, int bright) {
@@ -338,19 +255,17 @@ public class ImageProUtils {
      * @param aveCount
      * @return
      */
-    public static float NonUniformCorrection(long[] PixelSum, short[] gainArray, short[] pixelOffset, final int aveCount) {
+    public static float nonUniformCorrection(long[] PixelSum, short[] gainArray, short[] pixelOffset, final int aveCount) {
         if (PixelSum.length != pixelOffset.length) {
             return -1;
         }
         long sum = 0;
-
         for (int i = 0; i < PixelSum.length; ++i) {
             PixelSum[i] /= aveCount;
+            PixelSum[i] = setGain((short) PixelSum[i], gainArray[i]);
             sum += PixelSum[i];
-            PixelSum[i] = PixelSum[i] * (gainArray[i] & 0x1fff) / 0x1000;
         }
         float average = sum / PixelSum.length;
-
         for (int i = 0; i < PixelSum.length; ++i) {
             pixelOffset[i] = (short) (average - PixelSum[i]);
         }
@@ -359,56 +274,6 @@ public class ImageProUtils {
 
     /********************************/
 //滤波处理
-    public static void selectSort(short array[], int lenth) {
-        int minIndex;
-        for (int i = 0; i < lenth - 1; i++) {
-            minIndex = i;
-            for (int j = i + 1; j < lenth; j++) {
-                if (array[j] < array[minIndex]) {
-                    minIndex = j;
-                }
-            }
-            if (minIndex != i) {
-                short temp = array[i];
-                array[i] = array[minIndex];
-                array[minIndex] = temp;
-            }
-            if (i >= lenth / 2) {
-                return;
-            }
-        }
-    }
-
-    public static void selectSort(int array[], int lenth) {
-        int minIndex;
-        for (int i = 0; i < lenth - 1; i++) {
-            minIndex = i;
-            for (int j = i + 1; j < lenth; j++) {
-                if (array[j] < array[minIndex]) {
-                    minIndex = j;
-                }
-            }
-            if (minIndex != i) {
-                int temp = array[i];
-                array[i] = array[minIndex];
-                array[minIndex] = temp;
-            }
-            if (i >= lenth / 2) {
-                return;
-            }
-        }
-    }
-
-    public static short getMedian(short array[], int len) {
-        selectSort(array, len);
-        return array[len / 2];
-    }
-
-    public int getMedian(int array[], int len) {
-        selectSort(array, len);
-        return array[len / 2];
-    }
-
     public static boolean getKernel(short src[], int width, int x, int y, short array[], int ksize) {
         if (ksize == 3) {
             array[0] = src[y * width + x - 1];
@@ -434,6 +299,31 @@ public class ImageProUtils {
             return false;
         }
         return true;
+    }
+
+    public static void selectSort(short array[], int lenth) {
+        int minIndex;
+        for (int i = 0; i < lenth - 1; i++) {
+            minIndex = i;
+            for (int j = i + 1; j < lenth; j++) {
+                if (array[j] < array[minIndex]) {
+                    minIndex = j;
+                }
+            }
+            if (minIndex != i) {
+                short temp = array[i];
+                array[i] = array[minIndex];
+                array[minIndex] = temp;
+            }
+            if (i >= lenth / 2) {
+                return;
+            }
+        }
+    }
+
+    public static short getMedian(short array[], int len) {
+        selectSort(array, len);
+        return array[len / 2];
     }
 
     public static void MedianFlitering(short[] src, short[] dst, int width, int hight, int ksize) {
@@ -526,7 +416,7 @@ public class ImageProUtils {
     }
 
     public static short getBilateral(short array[], double[] template, int len, double sigma2) {
-        final short center=array[len / 2];
+        final short center = array[len / 2];
         double sum = 0, weightSum = 0;
         double weight;
         int gray;
@@ -565,7 +455,7 @@ public class ImageProUtils {
         for (int i = 0; i < len; ++i) {
             sum += array[i];
         }
-        return setPixelRange((short) (sum / len));
+        return (short) setPixelRange(sum / len);
     }
 
     public static void AverFiltering(short[] src, short[] dst, int width, int hight, int ksize) {

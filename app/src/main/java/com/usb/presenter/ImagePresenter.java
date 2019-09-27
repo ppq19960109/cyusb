@@ -31,6 +31,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
     private int prePackIndex; //上一个图像数据包的序号
 
     private short[] pixelShortSource;
+    private short[] pixelShortTarget;
     private int[] pixelIntSource;
     private short[] pixelOffset;
     private short[] pixelGain;
@@ -47,7 +48,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      * 非均匀校正标志
      */
     private volatile boolean correctionFlag;
-
+    private volatile boolean powerFlag;
 
     private ImageContract.CallBack callBack = new ImageContract.CallBack() {
         @Override
@@ -64,6 +65,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
         secondFrameBuf = new byte[imageByteLen];
 
         pixelShortSource = new short[imageSize];
+        pixelShortTarget = new short[imageSize];
         pixelIntSource = new int[imageSize];
         pixelOffset = new short[imageSize];
         pixelGain = new short[imageSize];
@@ -121,10 +123,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
         if (context == null) {
             return false;
         }
-        if (imageModel.openUsbDevice(context, index, callBack)) {
-            return imageZeroAdjust();
-        }
-        return false;
+        return imageModel.openUsbDevice(context, index, callBack);
     }
 
     /**
@@ -133,8 +132,8 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
     @Override
     public void closeTE() {
         threadClose();
-        removeImageCorrect();
         imageModel.close();
+        removeCalibrationOn();
     }
 
     /**
@@ -147,33 +146,14 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      */
     @Override
     public int recvImage(short[] buf, boolean agc) {
-
-        if (!isConnected() || !getImageFrame(pixelShortSource, 0)) {
+        if (!getImageFrame(pixelShortSource, 0)) {
             return 4;
         }
-        synchronized (this) {
-            ImageProUtils.setImageOffset(pixelShortSource, pixelGain, pixelOffset);
-        }
-        ImageProUtils.MedianFlitering(pixelShortSource, buf, imageWidth, imageHight, 3);
-//        ImageProUtils.GaussianFilter(pixelShortCorrection,buf,imageWidth,imageHight,9,0.7);
-//        ImageProUtils. BilateralFilter(pixelShortCorrection,buf,imageWidth,imageHight,9,8,3);
-        ImageProUtils.setRGBRange(buf, 2000, 20000);
-
+        ImageProUtils.setImageOffset(pixelShortSource, pixelShortTarget, pixelGain, pixelOffset);
         if (agc) {
-            ImageProUtils.setHist(buf, nHist, pHist, cHist);
-        }
-        return 1;
-    }
-
-    @Override
-    public int recvImage(int[] buf, boolean agc) {
-        if (!isConnected() || !getImageFrame(buf, 0)) {
-            return 4;
-        }
-        ImageProUtils.setImageOffset(buf, pixelGain, pixelOffset);
-        ImageProUtils.setRGBRange(buf, 2000, 20000);
-        if (agc) {
-            ImageProUtils.setHist(buf, nHist, pHist, cHist);
+            ImageProUtils.MedianFlitering(pixelShortTarget, buf, imageWidth, imageHight, 3);
+        } else {
+            System.arraycopy(pixelShortTarget, 0, buf, 0, buf.length);
         }
         return 1;
     }
@@ -188,7 +168,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
     @Override
     public float calcTemp(short x, short y) {
         if (isConnected()) {
-                return cySysConfig.grayToTemp(pixelShortSource[x + y * imageWidth], false);
+            return cySysConfig.grayToTemp(pixelShortTarget[x + y * imageWidth], false);
         }
         return 0;
     }
@@ -201,27 +181,35 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
     @Override
     public void calcTemp(float[] buf) {
         if (isConnected()) {
-                cySysConfig.grayToTemp(pixelShortSource, buf, false);
+            cySysConfig.grayToTemp(pixelShortTarget, buf, false);
         }
     }
 
+    public void steeringEngine(boolean bool) throws InterruptedException {
+        if (bool) {
+            imageModel.steeringEngine(1);
+
+        }else {
+            imageModel.steeringEngine(2);
+
+        }
+        Thread.sleep(100);
+        imageModel.steeringEngine(3);
+        Thread.sleep(200);
+    }
     /**
      * 图像校正
      *
      * @param aveCount
-     * @param steeringEngineDelay
      * @return
      * @throws InterruptedException
      */
     @Override
-    public boolean imageCorrection(final int aveCount, final int steeringEngineDelay) throws InterruptedException {
-
-        imageModel.steeringEngine(false);
-
-        Thread.sleep(steeringEngineDelay);
+    public boolean shutterCalibrationOn(final int aveCount) throws InterruptedException {
         correctionFlag = true;
-
-        for (int i = 0; i < 4; ++i) {
+        steeringEngine(false);
+        Arrays.fill(PixelSum, 0);
+        for (int i = 0; i < aveCount; ++i) {
             getImageFrame(pixelShortSource, 1);
         }
         for (int i = 0; i < aveCount; ++i) {
@@ -230,13 +218,15 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
                 PixelSum[j] += pixelShortSource[j];
             }
         }
-        cySysConfig.m_swZeroGray = ImageProUtils.NonUniformCorrection(PixelSum, pixelGain, pixelOffset, aveCount);
-
-        Arrays.fill(PixelSum, 0);
+        cySysConfig.m_swZeroGray = ImageProUtils.nonUniformCorrection(PixelSum, pixelGain, pixelOffset, aveCount);
+        steeringEngine(true);
         correctionFlag = false;
-        imageModel.steeringEngine(true);
-        Thread.sleep(steeringEngineDelay);
         return true;
+    }
+
+    @Override
+    public void removeCalibrationOn() {
+        Arrays.fill(pixelOffset, (short) 0);
     }
 
     @Override
@@ -244,12 +234,82 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
         return 0;
     }
 
+    /******************************************/
+    @Override
+    public boolean isConnected() {
+        return imageModel.isConnected();
+    }
+
+    @Override
+    public boolean setFocusing(boolean size, boolean range) {
+        return imageModel.setFocusing(size, range);
+    }
+
+    @Override
+    public int cameraPower(boolean enable) {
+        if (enable) {
+            powerFlag = true;
+            if (!imageModel.cameraPower(enable)) {
+                return 1;
+            }
+            new Thread() {
+                @Override
+                public void run() {
+                    super.run();
+                    try {
+                        Thread.sleep(800);
+                        zeroAdjust();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+
+                    powerFlag = false;
+                }
+            }.start();
+
+        } else {
+            while (powerFlag == true) ;
+            threadClose();
+            if (!imageModel.cameraPower(enable)) {
+                return 2;
+            }
+        }
+        return 0;
+    }
+
+    @Override
+    public boolean connectToPC() {
+        return imageModel.connectToPC();
+    }
 /******************************************/
+    /**
+     * 图像调零
+     *
+     * @param
+     * @return
+     */
+    public boolean zeroAdjust() throws InterruptedException {
+        imageModel.restartDetector();
+        Thread.sleep(10);
+        cySysConfig.m_fZeroTemp = imageModel.readZeroTemp();
+        Thread.sleep(10);
+        if (imageModel.readNonUniformCorrect(secondFrameBuf, imageByteLen)) {
+            ImageProUtils.getImageArray(pixelGain, secondFrameBuf);
+        } else {
+            onViewResult("ImagePresenter", "读取矫正数据失败");
+        }
+        threadInit();
+        Thread.sleep(10);
+        if (!imageModel.readConfig(cySysConfig)) {
+            onViewResult("ImagePresenter", "读取配置数据失败");
+        }
+        return true;
+    }
 
     /**
      * 图像线程初始化
      */
-    private void threadInit() {
+    public void threadInit() {
         threadClose();
         usbThread = new UsbThread();
         usbThread.start();
@@ -266,40 +326,6 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
     }
 
     /**
-     * 图像调零
-     *
-     * @param
-     * @return
-     * @throws InterruptedException
-     */
-    public boolean imageZeroAdjust() {
-
-        new Thread() {
-            @Override
-            public void run() {
-                super.run();
-                if (imageModel.readNonUniformCorrect(secondFrameBuf, imageByteLen)) {
-                    ImageProUtils.getImageArray(pixelGain, secondFrameBuf);
-                } else {
-                    onViewResult("ImagePresenter", "读取矫正数据失败");
-                }
-            }
-        }.start();
-
-        if (!imageModel.readConfig(cySysConfig)) {
-            onViewResult("ImagePresenter", "读取配置数据失败");
-        }
-        cySysConfig.m_fZeroTemp = imageModel.readZeroTemp();
-
-        return true;
-    }
-
-    public void removeImageCorrect() {
-        Arrays.fill(pixelOffset, (short) 0);
-    }
-
-
-    /**
      * 获取一帧图像
      *
      * @param frame
@@ -307,30 +333,6 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      * @return
      */
     private boolean getImageFrame(short[] frame, int index) {
-        if (index == 0) {
-            if (frameFlag == false || correctionFlag == true) {
-                return false;
-            }
-            frameFlag = false;
-            synchronized (this) {
-                ImageProUtils.getImageArray(frame, secondFrameBuf);
-            }
-        } else if (index == 1) {
-            for (; ; ) {
-                if (frameFlag == false) {
-                    continue;
-                }
-                frameFlag = false;
-                synchronized (this) {
-                    ImageProUtils.getImageArray(frame, secondFrameBuf);
-                }
-                break;
-            }
-        }
-        return true;
-    }
-
-    private boolean getImageFrame(int[] frame, int index) {
         if (index == 0) {
             if (frameFlag == false || correctionFlag == true) {
                 return false;
@@ -390,18 +392,15 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
         if (imageModel.bulkTransfer(0x81, packBuf, packHead + packSize, 100) < 0) {
             return false;
         }
-
         if (prePackIndex >= packBuf[2]) {
             synchronized (this) {
                 imageSort(firstFrameBuf, secondFrameBuf, imageByteLen, imageWidth);
             }
             frameFlag = true;
         }
-
         if (packBuf[2] < 16 && packBuf[2] >= 0) {
             System.arraycopy(packBuf, packHead, firstFrameBuf, packBuf[2] * packSize, packSize);
         }
-
         prePackIndex = packBuf[2];
         return true;
     }
@@ -410,7 +409,6 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
      * 线程不停从USB中读取图像数据
      */
     public class UsbThread extends Thread {
-
         @Override
         public void run() {
             super.run();
@@ -438,45 +436,11 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
 
     public Bitmap createBitmap(int[] imageSource) {
         CommonUtils.setFrequency(1);
+        ImageProUtils.setRGBRange(imageSource, 2000, 20000);
+//        ImageProUtils.setHist(imageSource, nHist, pHist, cHist);
         ImageProUtils.setArrayARGB(imageSource, true);
         return Bitmap.createBitmap(imageSource, imageWidth, imageHight,
                 Bitmap.Config.ARGB_8888);
-    }
-
-
-    /******************************************/
-    @Override
-    public boolean isConnected() {
-        return imageModel.isConnected();
-    }
-
-    @Override
-    public boolean setFocusing(boolean size, boolean range) {
-        return imageModel.setFocusing(size, range);
-    }
-
-    @Override
-    public int cameraPower(boolean enable) throws InterruptedException {
-        if (enable) {
-            Thread.sleep(800);
-            if (!imageModel.cameraPower(enable)) {
-                return 1;
-            }
-            Thread.sleep(800);
-            imageModel.restartDetector();
-            threadInit();
-        } else {
-            threadClose();
-            if (!imageModel.cameraPower(enable)) {
-                return 2;
-            }
-        }
-        return 0;
-    }
-
-    @Override
-    public boolean connectToPC() {
-        return imageModel.connectToPC();
     }
 
 
