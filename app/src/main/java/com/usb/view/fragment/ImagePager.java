@@ -27,6 +27,7 @@ import com.usb.common.ImageProUtils;
 import com.usb.model.R;
 import com.usb.presenter.TE_A;
 
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -243,7 +244,7 @@ public class ImagePager extends BaseFragment {
     }
 
     private void ThreadStart() {
-        BmpPlayThread = new BitmapPlayThread();
+        BmpPlayThread = new BitmapPlayThread(this);
         BmpPlayThread.execute();
 
         timerThread = new Timer();
@@ -264,14 +265,22 @@ public class ImagePager extends BaseFragment {
 
     class BitmapPlayThread extends AsyncTask<Integer, Bitmap, Void> {
 
+        private WeakReference<ImagePager> imagePager;
+        public BitmapPlayThread(ImagePager imagePager){
+            this.imagePager=new WeakReference<>(imagePager);
+        }
         @Override
         protected Void doInBackground(Integer... integer) {
             Bitmap bitmap = null;
             for (; ; ) {
-                if (cyImage.recvImage(imagebuf, true) != 1) {
+                ImagePager image=imagePager.get();
+                if(image==null){
+                  break;
+                }
+                if (image.cyImage.recvImage(image.imagebuf, true) != 1) {
                     continue;
                 }
-                bitmap = cyImage.createBitmap(imagebuf);
+                bitmap = image.cyImage.createBitmap(image.imagebuf);
 //                bitmap = Bitmap.createScaledBitmap(bitmap, imageView.getWidth()*384/288, imageView.getWidth(), false);
                 bitmap = ImageProUtils.rotateBimap(180, bitmap);
                 if (bitmap != null) {
@@ -287,7 +296,11 @@ public class ImagePager extends BaseFragment {
         @Override
         protected void onProgressUpdate(Bitmap... values) {
             super.onProgressUpdate(values);
-            imageView.setImageBitmap(values[0]);
+            ImagePager image=imagePager.get();
+            if(image!=null){
+                image.imageView.setImageBitmap(values[0]);
+            }
+
         }
     }
 

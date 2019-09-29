@@ -19,8 +19,6 @@ public interface ImageContract {
 
         int recvImage(short[] buf, boolean agc);
 
-        int recvImage(int[] buf, boolean agc);
-
         int getImageHeight();
 
         int getImageWidth();
@@ -49,8 +47,6 @@ public interface ImageContract {
 
         int recvImage(short[] buf, boolean agc);
 
-        int recvImage(int[] buf, boolean agc);
-
         int getImageHeight();
 
         int getImageWidth();
@@ -59,19 +55,19 @@ public interface ImageContract {
 
         void calcTemp(float[] buf);
 
-        boolean imageCorrection(final int aveCount, final int steeringEngineDelay) throws InterruptedException;
+        boolean shutterCalibrationOn(final int aveCount) throws InterruptedException;
+
+        void removeCalibrationOn();
 
         int getID();
 
         boolean setFocusing(boolean size, boolean range);
 
-        int cameraPower(boolean enable)throws InterruptedException;
+        int cameraPower(boolean enable);
 
         boolean connectToPC();
 
         Bitmap createBitmap(short[] buf);
-
-        void removeImageCorrect();
     }
 
     interface IImageModel {
@@ -95,7 +91,7 @@ public interface ImageContract {
 
         boolean readNonUniformCorrect(byte[] outData, int len);
 
-        boolean steeringEngine(boolean bool) throws InterruptedException;
+        boolean steeringEngine(int index);
 
         boolean setFocusing(boolean size, boolean range);
 

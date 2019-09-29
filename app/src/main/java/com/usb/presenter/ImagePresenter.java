@@ -247,6 +247,9 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
 
     @Override
     public int cameraPower(boolean enable) {
+        if(!isConnected()){
+            return 1;
+        }
         if (enable) {
             powerFlag = true;
             if (!imageModel.cameraPower(enable)) {
@@ -298,6 +301,7 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
         } else {
             onViewResult("ImagePresenter", "读取矫正数据失败");
         }
+        Thread.sleep(10);
         threadInit();
         Thread.sleep(10);
         if (!imageModel.readConfig(cySysConfig)) {
@@ -431,14 +435,17 @@ public class ImagePresenter implements ImageContract.IImagePresenter {
         for (int i = 0; i < imageSource.length; ++i) {
             pixelIntSource[i] = imageSource[i];
         }
+
         return createBitmap(pixelIntSource);
     }
 
     public Bitmap createBitmap(int[] imageSource) {
         CommonUtils.setFrequency(1);
+
         ImageProUtils.setRGBRange(imageSource, 2000, 20000);
 //        ImageProUtils.setHist(imageSource, nHist, pHist, cHist);
-        ImageProUtils.setArrayARGB(imageSource, true);
+        ImageProUtils.setArrayARGB(imageSource, false);
+
         return Bitmap.createBitmap(imageSource, imageWidth, imageHight,
                 Bitmap.Config.ARGB_8888);
     }

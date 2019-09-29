@@ -157,7 +157,7 @@ public class ImageModel implements ImageContract.IImageModel {
             return false;
         }
 
-        if ((transLen = bulkTransfer(0x82, outData, len, 5000)) < 0) {
+        if ((transLen = bulkTransfer(0x82, outData, len, 8000)) < 0) {
             return false;
         }
         cmd = usbCmdToData(0x21, 0, 0);
